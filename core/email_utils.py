@@ -71,12 +71,23 @@ def _send_html_email(subject, text_body, html_body, recipient_list):
 
 
 def _send_html_email_async(subject, text_body, html_body, recipient_list):
-    """Fire-and-forget email sending in a background thread."""
-    thread = threading.Thread(
-        target=_send_html_email,
-        args=(subject, text_body, html_body, recipient_list),
-        daemon=True,
-    )
+    """Send email in a background thread. Logs success/failure clearly."""
+    from django.conf import settings as dj_settings
+
+    def _run():
+        ok = _send_html_email(subject, text_body, html_body, recipient_list)
+        if not ok:
+            # ERROR level so it always appears in Railway logs
+            logger.error(
+                "EMAIL DELIVERY FAILED | to=%s | subject=%s | "
+                "USER=%s | HOST=%s:%s",
+                recipient_list, subject,
+                getattr(dj_settings, "EMAIL_HOST_USER", "NOT SET"),
+                getattr(dj_settings, "EMAIL_HOST", "NOT SET"),
+                getattr(dj_settings, "EMAIL_PORT", "NOT SET"),
+            )
+
+    thread = threading.Thread(target=_run, daemon=True)
     thread.start()
     return True
 

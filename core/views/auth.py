@@ -180,7 +180,7 @@ def google_auth_start(request):
 
     state = secrets.token_hex(16)
 
-    redirect_uri = "http://127.0.0.1:8000/auth/google/callback/"
+    redirect_uri = f"{settings.SITE_URL.rstrip('/')}/auth/google/callback/"
     params = urllib.parse.urlencode({
         "client_id": client_id,
         "redirect_uri": redirect_uri,

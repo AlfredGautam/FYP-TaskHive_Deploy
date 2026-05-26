@@ -4,7 +4,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "daphne -b 0.0.0.0 -p $PORT taskhive.asgi:application",
+    "startCommand": "python manage.py migrate --noinput && python manage.py collectstatic --noinput && daphne -b 0.0.0.0 -p $PORT taskhive.asgi:application",
     "healthcheckPath": "/api/health/",
     "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",

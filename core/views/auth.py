@@ -217,10 +217,8 @@ def google_auth_callback(request):
         logger.error("Missing authorization code")
         return HttpResponse("Missing authorization code", status=400)
 
-    # Use the actual request host for redirect_uri (supports localhost, 127.0.0.1, etc.)
-    scheme = request.scheme
-    host = request.get_host()
-    redirect_uri = f"{scheme}://{host}/auth/google/callback/"
+    # Use SITE_URL so the scheme is always correct (Railway proxy strips https)
+    redirect_uri = f"{settings.SITE_URL.rstrip('/')}/auth/google/callback/"
 
     client_id = settings.GOOGLE_CLIENT_ID
     client_secret = settings.GOOGLE_CLIENT_SECRET

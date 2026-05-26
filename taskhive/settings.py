@@ -34,6 +34,9 @@ if not SECRET_KEY:
 # Dev safe hosts
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
+# Trust Railway's reverse proxy so request.scheme returns 'https' correctly
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # CSRF trusted origins — add your Railway domain here once you know it.
 # Railway domains look like: https://your-app-name.railway.app
 CSRF_TRUSTED_ORIGINS = [

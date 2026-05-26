@@ -29,6 +29,12 @@ class TaskHiveAdminSite(admin.AdminSite):
     index_title = "Team Management"
     login_template = "admin/admin_login.html"
 
+    # Use plain AuthenticationForm so the "staff account" check in
+    # AdminAuthenticationForm doesn't block superusers.
+    # has_permission() below already enforces is_staff + is_superuser.
+    from django.contrib.auth.forms import AuthenticationForm
+    login_form = AuthenticationForm
+
     def has_permission(self, request):
         """Require user to be active, staff, AND superuser to access admin."""
         return (

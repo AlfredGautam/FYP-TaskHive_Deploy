@@ -13,6 +13,6 @@ urlpatterns = [
 handler404 = "core.views.error_404"
 handler500 = "core.views.error_500"
 
-# ✅ serve uploaded files in dev
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve uploaded media files in both dev and production
+# (acceptable for demo/small deployments - Railway filesystem is ephemeral but works during a session)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

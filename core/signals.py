@@ -2,11 +2,12 @@
 Signal handlers for tracking login history, failed login attempts,
 and broadcasting admin dashboard refresh events via WebSocket.
 """
+import asyncio
+import threading
 from django.contrib.auth.signals import user_logged_in, user_login_failed
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 
 
 def _get_client_ip(request):
@@ -33,14 +34,25 @@ def _notify_admin_dashboard(reason="data_changed"):
         cache.delete("admin_dashboard_stats")
     except Exception:
         pass
-    try:
-        layer = get_channel_layer()
-        async_to_sync(layer.group_send)(
-            "admin_dashboard",
-            {"type": "admin_refresh", "reason": reason},
-        )
-    except Exception:
-        pass
+
+    def _do():
+        try:
+            layer = get_channel_layer()
+            if layer is None:
+                return
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(layer.group_send(
+                    "admin_dashboard",
+                    {"type": "admin_refresh", "reason": reason},
+                ))
+            finally:
+                loop.close()
+        except Exception:
+            pass
+
+    threading.Thread(target=_do, daemon=True).start()
 
 
 @receiver(user_logged_in)

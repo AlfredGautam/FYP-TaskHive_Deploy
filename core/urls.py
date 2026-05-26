@@ -57,9 +57,10 @@ urlpatterns = [
     path("favicon.ico", RedirectView.as_view(url=static("core/favicon.svg"), permanent=True)),
 
     # --------------------
-    # Health check
+    # Health check + Email test
     # --------------------
     path("api/health/", views.api_health, name="api_health"),
+    path("api/test-email/", views.api_test_email, name="api_test_email"),
 
     # --------------------
     # Public landing

@@ -7,7 +7,7 @@
   <title>TaskHive - Workspace</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%234f46e5'/><text y='.9em' font-size='65' x='14'>🧊</text></svg>">
 
-  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 
   <link rel="stylesheet"
@@ -1904,7 +1904,7 @@
       // WebSocket for real-time updates
       this._connectWebSocket();
       // Fallback poll every 60s in case WS drops
-      this.dataPollTimer = setInterval(() => { if (!this._ws || this._ws.readyState !== 1) { this.loadNotifications(); this.loadData(); } }, 60000);
+      this.dataPollTimer = setInterval(() => { if (!this._ws || this._ws.readyState !== 1) { this.loadNotifications(); this.loadData(); } }, 15000);
     },
 
     beforeDestroy() {
@@ -1945,6 +1945,8 @@
               if (msg.type === 'new_notification') {
                 vm.loadNotifications();
                 vm.loadInvitations();
+                // Also reload task/project data so assigned tasks appear immediately
+                vm.loadData();
               }
               if (msg.type === 'data_changed') {
                 vm.loadData();

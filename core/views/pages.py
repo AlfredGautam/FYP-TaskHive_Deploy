@@ -64,6 +64,42 @@ def api_health(request):
     }, status=status)
 
 
+def api_test_email(request):
+    """Quick test: send a test email to verify SMTP config.
+    Usage: /api/test-email/?to=someone@gmail.com
+    Only accessible to superusers."""
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+    to = request.GET.get("to", "").strip()
+    if not to:
+        return JsonResponse({"error": "Pass ?to=email@example.com"}, status=400)
+
+    host_user = getattr(settings, "EMAIL_HOST_USER", None)
+    host_pass = getattr(settings, "EMAIL_HOST_PASSWORD", None)
+
+    # Config summary
+    config = {
+        "EMAIL_HOST": getattr(settings, "EMAIL_HOST", None),
+        "EMAIL_PORT": getattr(settings, "EMAIL_PORT", None),
+        "EMAIL_USE_TLS": getattr(settings, "EMAIL_USE_TLS", None),
+        "EMAIL_HOST_USER": host_user or "⚠ NOT SET",
+        "EMAIL_HOST_PASSWORD": ("✓ set" if host_pass else "⚠ NOT SET"),
+        "DEFAULT_FROM_EMAIL": getattr(settings, "DEFAULT_FROM_EMAIL", None),
+    }
+
+    try:
+        send_mail(
+            subject="[TaskHive] Test Email",
+            message="This is a test email from TaskHive. If you see this, SMTP is working correctly.",
+            from_email=host_user or "taskhive65@gmail.com",
+            recipient_list=[to],
+            fail_silently=False,
+        )
+        return JsonResponse({"ok": True, "message": f"Test email sent to {to}", "config": config})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": str(e), "config": config}, status=500)
+
+
 def dashboard_page(request):
     return render(request, "core/dashboard.html")
 

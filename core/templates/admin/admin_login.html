@@ -150,7 +150,7 @@ body{
 
   {% if form.errors %}
   <div class="error-msg">
-    Invalid username or password. Please try again.
+    {{ form.errors }}
   </div>
   {% endif %}
 

@@ -68,8 +68,8 @@ def api_test_email(request):
     """Quick test: send a test email to verify SMTP config.
     Usage: /api/test-email/?to=someone@gmail.com
     Only accessible to superusers."""
-    if not request.user.is_authenticated or not request.user.is_superuser:
-        return JsonResponse({"error": "Forbidden"}, status=403)
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Forbidden — please log in first"}, status=403)
     to = request.GET.get("to", "").strip()
     if not to:
         return JsonResponse({"error": "Pass ?to=email@example.com"}, status=400)

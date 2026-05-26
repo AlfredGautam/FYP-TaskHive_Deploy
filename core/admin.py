@@ -32,18 +32,26 @@ class TaskHiveAdminSite(admin.AdminSite):
     def login(self, request, extra_context=None):
         """Override login to authenticate directly — bypasses form backend issues."""
         from django.contrib.auth import authenticate, login as auth_login
-        from django.http import HttpResponseRedirect
+        from django.http import HttpResponseRedirect, HttpResponse
 
         if request.method == "POST":
             username = request.POST.get("username", "").strip()
             password = request.POST.get("password", "")
             if username and password:
-                # Authenticate with request=None (avoids proxy/header issues)
                 user = authenticate(request=None, username=username, password=password)
-                if user and user.is_active and user.is_staff and user.is_superuser:
+                if user is None:
+                    return HttpResponse(f"DEBUG: authenticate() returned None for '{username}'", status=401)
+                if not user.is_active:
+                    return HttpResponse(f"DEBUG: user.is_active=False", status=403)
+                if not user.is_staff:
+                    return HttpResponse(f"DEBUG: user.is_staff=False", status=403)
+                if not user.is_superuser:
+                    return HttpResponse(f"DEBUG: user.is_superuser=False", status=403)
+                try:
                     auth_login(request, user, backend="core.backends.EmailBackend")
-                    next_url = request.POST.get("next") or "/admin/"
-                    return HttpResponseRedirect(next_url)
+                except Exception as e:
+                    return HttpResponse(f"DEBUG: auth_login failed: {e}", status=500)
+                return HttpResponseRedirect("/admin/")
         return super().login(request, extra_context)
 
     def has_permission(self, request):

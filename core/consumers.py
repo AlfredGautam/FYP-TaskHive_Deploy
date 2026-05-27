@@ -7,7 +7,7 @@ ADMIN_DASHBOARD_GROUP = "admin_dashboard"
 
 
 class AdminDashboardConsumer(AsyncWebsocketConsumer):
-    """WebSocket for admin dashboard — pushes real-time updates when data changes."""
+    """WebSocket for admin dashboard - pushes real-time updates when data changes."""
 
     async def connect(self):
         user = self.scope.get("user")
@@ -24,7 +24,7 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
         pass
 
     async def admin_refresh(self, event):
-        """Handler for admin_refresh type messages — tells the dashboard to reload data."""
+        """Handler for admin_refresh type messages - tells the dashboard to reload data."""
         await self.send(text_data=json.dumps({
             "type": "admin_refresh",
             "reason": event.get("reason", "data_changed"),
@@ -32,7 +32,7 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
 
 
 class NotificationConsumer(AsyncWebsocketConsumer):
-    """WebSocket consumer — joins user-specific room + team room for real-time updates."""
+    """WebSocket consumer - joins user-specific room + current team room for real-time updates."""
 
     async def connect(self):
         self.rooms = []
@@ -47,7 +47,9 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         self.rooms.append(user_room)
         await self.channel_layer.group_add(user_room, self.channel_name)
 
-        # Also join team room if the user is in a team
+        # FIX: Join the user's CURRENT team room (profile.current_team_id).
+        # The backend broadcasts to team_{profile.current_team_id}, so this
+        # consumer must subscribe to exactly that room - not an arbitrary membership.
         team_id = await self._get_team_id(user)
         if team_id:
             team_room = f"team_{team_id}"
@@ -81,6 +83,15 @@ class NotificationConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _get_team_id(self, user):
-        from core.models import TeamMembership
+        # Return the user current team id (the one active in their profile).
+        # Falls back to first membership for accounts that have no profile yet.
+        from core.models import UserProfile, TeamMembership
+        try:
+            profile = UserProfile.objects.get(user=user)
+            if profile.current_team_id:
+                return profile.current_team_id
+        except UserProfile.DoesNotExist:
+            pass
+        # Fallback: first membership
         m = TeamMembership.objects.filter(user=user).first()
         return m.team_id if m else None

@@ -42,6 +42,9 @@ from core.sanitize import sanitize_text
 
 logger = logging.getLogger(__name__)
 
+# Matches @username tokens in comment bodies, e.g. @alice or @alice.smith
+_MENTION_RE = re.compile(r"@([\w.\-]+)")
+
 
 def _get_user_team(user):
     profile, _ = UserProfile.objects.get_or_create(user=user)
@@ -1043,6 +1046,8 @@ def api_workspace_file_upload(request):
         target_id=pf.id,
         extra={"fileName": pf.name},
     )
+    _log_activity(team, request.user, "uploaded", "file", pf.id, pf.name,
+                  f"{_actor_name(request.user)} uploaded file '{pf.name}'")
 
     return JsonResponse({
         "ok": True,
@@ -1087,6 +1092,8 @@ def api_workspace_file_delete(request):
             target_id=file_id,
             extra={"fileName": file_name},
         )
+        _log_activity(team, request.user, "deleted", "file", file_id, file_name,
+                      f"{_actor_name(request.user)} deleted file '{file_name}'")
     return JsonResponse({"ok": True})
 
 
@@ -1175,6 +1182,9 @@ def api_workspace_approval_resolve(request):
             target_id=ar.target_id,
             extra={"summary": ar.summary, "action": ar.action},
         )
+        _log_activity(team, request.user, "resolved", ar.entity_type, ar.target_id,
+                      ar.summary or ar.action,
+                      f"{_actor_name(request.user)} resolved approval: {ar.summary or ar.action}")
     return JsonResponse({"ok": True})
 
 
@@ -1300,6 +1310,8 @@ def api_task_comment_delete(request, task_id, comment_id):
     comment = TaskComment.objects.filter(id=comment_id, task=task).first()
     if comment:
         comment.delete()
+        _log_activity(team, request.user, "deleted_comment", "task", task.id, task.title,
+                      f"{_actor_name(request.user)} deleted a comment on '{task.title}'")
     return JsonResponse({"ok": True})
 
 
@@ -1392,7 +1404,10 @@ def api_task_attachment_delete(request, task_id, attachment_id):
 
     att = TaskAttachment.objects.filter(id=attachment_id, task=task).first()
     if att:
+        att_name = att.original_name
         att.delete()
+        _log_activity(team, request.user, "deleted_attachment", "task", task.id, task.title,
+                      f"{_actor_name(request.user)} removed attachment '{att_name}' from '{task.title}'")
     return JsonResponse({"ok": True})
 
 
@@ -1446,11 +1461,15 @@ def api_task_subtask_save(request, task_id):
         if "isDone" in data:
             sub.is_done = bool(data["isDone"])
         sub.save()
+        _log_activity(team, request.user, "updated_subtask", "task", task.id, task.title,
+                      f"{_actor_name(request.user)} updated subtask on '{task.title}'")
     else:
         if not title:
             return JsonResponse({"ok": False, "error": "Title required"}, status=400)
         max_pos = Subtask.objects.filter(task=task).count()
         sub = Subtask.objects.create(task=task, title=title, position=max_pos)
+        _log_activity(team, request.user, "added_subtask", "task", task.id, task.title,
+                      f"{_actor_name(request.user)} added subtask '{title}' to '{task.title}'")
 
     return JsonResponse({
         "ok": True,
@@ -1477,7 +1496,53 @@ def api_task_subtask_delete(request, task_id, subtask_id):
 
     sub = Subtask.objects.filter(id=subtask_id, task=task).first()
     if sub:
+        sub_title = sub.title
         sub.delete()
+        _log_activity(team, request.user, "deleted_subtask", "task", task.id, task.title,
+                      f"{_actor_name(request.user)} removed subtask '{sub_title}' from '{task.title}'")
     return JsonResponse({"ok": True})
 
 
+ave()
+        _log_activity(team, request.user, "updated_subtask", "task", task.id, task.title,
+                      f"{_actor_name(request.user)} updated subtask on '{task.title}'")
+    else:
+        if not title:
+            return JsonResponse({"ok": False, "error": "Title required"}, status=400)
+        max_pos = Subtask.objects.filter(task=task).count()
+        sub = Subtask.objects.create(task=task, title=title, position=max_pos)
+        _log_activity(team, request.user, "added_subtask", "task", task.id, task.title,
+                      f"{_actor_name(request.user)} added subtask '{title}' to '{task.title}'")
+
+    return JsonResponse({
+        "ok": True,
+        "subtask": {
+            "id": sub.id,
+            "title": sub.title,
+            "isDone": sub.is_done,
+            "position": sub.position,
+        }
+    })
+
+
+@require_POST
+@login_required
+def api_task_subtask_delete(request, task_id, subtask_id):
+    team, membership = _get_user_team(request.user)
+    if not team:
+        return JsonResponse({"ok": False, "error": "No team"}, status=400)
+
+    board = _get_team_board(team)
+    task = Task.objects.filter(id=task_id, board=board).first()
+    if not task:
+        return JsonResponse({"ok": False, "error": "Task not found"}, status=404)
+
+    sub = Subtask.objects.filter(id=subtask_id, task=task).first()
+    if sub:
+        sub_title = sub.title
+        sub.delete()
+        _log_activity(team, request.user, "deleted_subtask", "task", task.id, task.title,
+                      f"{_actor_name(request.user)} removed subtask '{sub_title}' from '{task.title}'")
+    return JsonResponse({"ok": True})
+    return JsonResponse({"ok": True})
+)

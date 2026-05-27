@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'anymail',
     'core',
 ]
 
@@ -166,20 +167,24 @@ AUTHENTICATION_BACKENDS = [
 
 
 # =========================
-# EMAIL (OTP) SETTINGS
+# EMAIL SETTINGS
 # =========================
-# Gmail SMTP is blocked by Railway. Use Brevo (smtp-relay.brevo.com) or
-# any transactional email provider instead.
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp-relay.brevo.com")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
-EMAIL_USE_TLS = True
-EMAIL_USE_SSL = False
+# Railway blocks all outbound SMTP (port 587/465). We use Brevo's HTTP API
+# via django-anymail which goes over HTTPS (port 443) — never blocked.
+BREVO_API_KEY = os.getenv("BREVO_API_KEY", "")
 
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+if BREVO_API_KEY:
+    # Production: use Brevo HTTP API
+    EMAIL_BACKEND = "anymail.backends.brevo.EmailBackend"
+    ANYMAIL = {
+        "BREVO_API_KEY": BREVO_API_KEY,
+    }
+else:
+    # Local dev fallback: print emails to console
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "taskhive65@gmail.com"
+DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "TaskHive <aca8ce001@smtp-brevo.com>")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 
 # =========================
 # GOOGLE OAUTH

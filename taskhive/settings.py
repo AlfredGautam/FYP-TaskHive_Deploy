@@ -145,7 +145,9 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media (ONLY ONCE)
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# Allow overriding MEDIA_ROOT via env var so the Railway Volume mount path
+# can be set explicitly. Default: <project_root>/media
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media")))
 
 
 # Default primary key field type

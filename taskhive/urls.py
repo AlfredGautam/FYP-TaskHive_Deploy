@@ -1,7 +1,7 @@
-from django.urls import path, include
+from django.urls import path, include, re_path
+from django.views.static import serve
 
 from django.conf import settings
-from django.conf.urls.static import static
 
 from core.admin import taskhive_admin
 
@@ -13,6 +13,9 @@ urlpatterns = [
 handler404 = "core.views.error_404"
 handler500 = "core.views.error_500"
 
-# Serve uploaded media files in both dev and production
-# (acceptable for demo/small deployments - Railway filesystem is ephemeral but works during a session)
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve uploaded media files — works in both DEBUG=True and DEBUG=False.
+# Django's static() helper silently skips the route when DEBUG=False,
+# so we use re_path + serve directly to guarantee media is always accessible.
+urlpatterns += [
+    re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
+]

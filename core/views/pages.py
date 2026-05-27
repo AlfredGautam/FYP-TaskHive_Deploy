@@ -77,8 +77,18 @@ def api_test_email(request):
     host_user = getattr(settings, "EMAIL_HOST_USER", None)
     host_pass = getattr(settings, "EMAIL_HOST_PASSWORD", None)
 
+    # Show what BREVO_API_KEY the app actually sees (first 12 + last 6 chars only)
+    import os
+    raw_key = os.getenv("BREVO_API_KEY", "")
+    if raw_key:
+        key_preview = raw_key[:12] + "..." + raw_key[-6:] + f" (len={len(raw_key)})"
+    else:
+        key_preview = "⚠ NOT SET"
+
     # Config summary
     config = {
+        "EMAIL_BACKEND": getattr(settings, "EMAIL_BACKEND", None),
+        "BREVO_API_KEY": key_preview,
         "EMAIL_HOST": getattr(settings, "EMAIL_HOST", None),
         "EMAIL_PORT": getattr(settings, "EMAIL_PORT", None),
         "EMAIL_USE_TLS": getattr(settings, "EMAIL_USE_TLS", None),

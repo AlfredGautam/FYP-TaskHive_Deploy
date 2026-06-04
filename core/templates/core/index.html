@@ -150,7 +150,48 @@
     .preview-box { background:#fff;border-radius:16px;overflow:hidden;max-width:90vw;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 25px 60px rgba(0,0,0,0.4); }
     /* Hide raw Vue templates until Vue mounts */
     [v-cloak] { display: none !important; }
+
+    /* ── iOS 100dvh support ── */
+    @supports (height: 100dvh) {
+      body { height: 100dvh !important; }
+      #app { height: 100dvh !important; }
+      .workspace-main { height: calc(100dvh - 60px) !important; }
+    }
+
+    /* ── Mobile sidebar drawer ── */
+    @media (max-width: 767px) {
+      .app-sidebar {
+        position: fixed !important;
+        top: 60px;
+        left: 0;
+        height: calc(var(--vh, 1vh) * 100 - 60px) !important;
+        width: 260px !important;
+        z-index: 40;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.12);
+      }
+      .app-sidebar.is-open {
+        transform: translateX(0);
+      }
+      .modal {
+        margin-left: 1rem !important;
+        margin-right: 1rem !important;
+        max-width: calc(100vw - 2rem) !important;
+      }
+    }
+    /* ── Smooth touch scrolling ── */
+    .overflow-auto { -webkit-overflow-scrolling: touch; }
   </style>
+
+  <!-- Viewport height fix for mobile browsers (iOS Safari) -->
+  <script>
+    (function(){
+      function setVH(){ document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px'); }
+      setVH();
+      window.addEventListener('resize', setVH);
+    })();
+  </script>
 
   <!-- ✅ SINGLE SAFE AUTH GUARD -->
   <script>
@@ -175,8 +216,13 @@
 <div id="app" v-cloak class="flex flex-col" style="height:100vh;overflow:hidden;" @click="closeContextMenu">
 
   <!-- Header -->
-  <header class="bg-white border-b border-gray-200 px-6 flex justify-between items-center shadow-sm flex-shrink-0" style="height:60px;min-height:60px;max-height:60px;">
+  <header class="bg-white border-b border-gray-200 px-3 md:px-6 flex justify-between items-center shadow-sm flex-shrink-0" style="height:60px;min-height:60px;max-height:60px;">
     <div class="flex items-center">
+      <button @click.stop="showMobileSidebar = !showMobileSidebar"
+              class="md:hidden mr-2 w-8 h-8 flex items-center justify-center rounded-lg text-slate-600 hover:bg-gray-100 transition-colors"
+              aria-label="Toggle menu">
+        <i class="fas fa-bars text-sm"></i>
+      </button>
       <div class="text-indigo-600 text-xl mr-3">
         <i class="fas fa-cubes"></i>
       </div>
@@ -323,7 +369,7 @@
         </button>
 
         <div v-if="showNotifications"
-             class="absolute right-0 mt-2 w-96 max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl z-50">
+             class="absolute right-0 mt-2 w-80 max-w-[calc(100vw-1rem)] max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-xl z-50">
           <div class="flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
             <p class="text-xs font-semibold text-slate-700 uppercase tracking-wide">Notifications</p>
             <button @click="markAllNotificationsRead" class="text-[11px] text-indigo-600 hover:text-indigo-700">Mark all read</button>
@@ -375,9 +421,18 @@
   </header>
 
   <!-- Main -->
-  <main class="flex overflow-hidden" style="height:calc(100vh - 60px);min-height:0;">
+  <main class="flex overflow-hidden workspace-main" style="height:calc(100vh - 60px);min-height:0;">
+    <!-- Mobile sidebar backdrop -->
+    <transition name="fade">
+      <div v-if="showMobileSidebar"
+           class="fixed inset-0 bg-black/40 z-[39] md:hidden"
+           style="top:60px"
+           @click="showMobileSidebar = false"></div>
+    </transition>
     <!-- Sidebar -->
-    <aside class="w-64 bg-white border-r border-gray-200 py-5 px-3 flex flex-col shadow-sm flex-shrink-0" style="height:100%;overflow-y:auto;">
+    <aside class="app-sidebar w-64 bg-white border-r border-gray-200 py-5 px-3 flex flex-col shadow-sm flex-shrink-0"
+           :class="{'is-open': showMobileSidebar}"
+           style="height:100%;overflow-y:auto;">
       <nav class="space-y-0.5 flex-1">
         <button
           v-for="tab in tabs"
@@ -397,12 +452,12 @@
     </aside>
 
     <!-- Content -->
-    <div class="flex-1 overflow-auto p-6 bg-slate-50">
+    <div class="flex-1 overflow-auto p-3 md:p-6 bg-slate-50">
 
       <!-- Pending Invitations Banner -->
       <div v-if="pendingInvitations.length" class="mb-4 space-y-2">
         <div v-for="inv in pendingInvitations" :key="inv.id"
-             class="flex items-center justify-between px-4 py-3 rounded-xl bg-indigo-50 border border-indigo-100">
+             class="flex flex-wrap items-center justify-between gap-3 px-4 py-3 rounded-xl bg-indigo-50 border border-indigo-100">
           <div class="flex items-center gap-3">
             <div class="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
               <i class="fas fa-envelope-open-text text-sm"></i>
@@ -832,7 +887,7 @@
         </div>
 
         <!-- LIST VIEW -->
-        <div v-if="fileView === 'list'" class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div v-if="fileView === 'list'" class="bg-white rounded-xl border border-slate-200 overflow-x-auto">
           <div v-if="!filteredFiles.length" class="py-10 text-center text-slate-400">
             <i class="fas fa-folder-open text-3xl mb-2 block"></i><p class="text-sm">No files match this filter</p>
           </div>
@@ -960,7 +1015,7 @@
         </div>
 
         <!-- Monthly Stats Bar -->
-        <div class="grid grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div class="bg-white rounded-xl px-4 py-3 border border-slate-200 flex items-center gap-3">
             <div style="width:34px;height:34px;border-radius:10px;background:#eef2ff;display:flex;align-items:center;justify-content:center;"><i class="fas fa-list-check" style="color:#4f46e5;font-size:14px;"></i></div>
             <div><div class="text-xl font-bold text-slate-900">{{ calendarMonthStats.due }}</div><div class="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Due this month</div></div>
@@ -976,7 +1031,7 @@
         </div>
 
         <!-- Legend + Calendar + Upcoming panel -->
-        <div class="flex gap-4 items-start">
+        <div class="flex flex-col md:flex-row gap-4 items-start">
 
           <!-- Calendar grid -->
           <div class="flex-1 min-w-0">
@@ -1016,7 +1071,7 @@
           </div>
 
           <!-- Upcoming Deadlines panel -->
-          <div class="w-52 flex-shrink-0">
+          <div class="w-full md:w-52 md:flex-shrink-0">
             <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
               <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
                 <i class="fas fa-bolt text-amber-500 text-xs"></i>
@@ -1177,6 +1232,9 @@
                   <i class="fas fa-user text-indigo-500 text-xs"></i>
                   <span class="m-name">{{ m.name || m.email }}</span>
                   <span class="m-email">{{ m.email }}</span>
+
+
+                  <div
                 </div>
               </div>
             </div>
@@ -1636,6 +1694,7 @@
     data() {
       return {
         isDark: true,
+        showMobileSidebar: false,
         searchQuery: "",
         highlightedIndex: 0,
         currentTab: "projects",
@@ -1663,7 +1722,6 @@
 
         editingTask: false,
         editingProject: false,
-
         itemToDelete: { type: "", name: "", id: null },
         contextMenu: { visible: false, type: null, item: null, x: 0, y: 0 },
 
@@ -2317,6 +2375,7 @@
 
       switchTab(tabId) {
         this.currentTab = tabId;
+        this.showMobileSidebar = false;
         if (tabId === 'activity') this.loadActivityLog();
         if (tabId === 'calendar') this.loadCalendarEvents();
       },
